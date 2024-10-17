@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "forecasty"
+version = "0.1.0"
+description = ""
+authors = ["Mark Meliksetyan <markmelix@gmail.com>"]
+readme = "README.md"
+packages = [{include = "forecasty"}]
+
+[tool.poetry.dependencies]
+python = "^3.12.7"
+flask = "^3.0.3"
+gunicorn = "^23.0.0"
+requests = "^2.32.3"
+redis = {extras = ["hiredis"], version = "^5.1.1"}
+pydantic = "^2.9.2"
+
+[build-system]
+requires = ["poetry-core>=1.6.1"]
+build-backend = "poetry.core.masonry.api"

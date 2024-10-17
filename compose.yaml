@@ -1,0 +1,38 @@
+services:
+  redis:
+    container_name: redis
+    restart: always
+    image: redis:7.2.3-alpine3.18
+    command: redis-server --requirepass ${REDIS_PASSWORD} --save 60 1
+    volumes:
+      - .redis:/data
+    networks:
+      - default
+    ports:
+      - 6379:6379
+
+  backend:
+    container_name: forecasty-backend
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    ports:
+      - 5000:5000
+    networks:
+      - default
+    stop_grace_period: 1s
+
+  frontend:
+    container_name: forecasty-frontend
+    build:
+      context: ./frontend
+    ports:
+      - 3000:3000
+    networks:
+      - default
+    stop_grace_period: 1s
+
+networks:
+  default:
+    driver: bridge

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 
 
-class _FuncCached(BaseModel):
+class _FuncCacheDump(BaseModel):
     timestamp: int
     output: str
 
@@ -22,17 +22,16 @@ class MemCache:
         args_hash.update(hash(json.dumps(kwargs)).to_bytes())
         return args_hash.hexdigest()
 
-    def key_func(self, args: tuple, kwargs: dict):
-        return f"func:{self._hash_func_args(args, kwargs)}"
+    def key_func(self, name: str, args: tuple, kwargs: dict):
+        return f"func:{name}:{self._hash_func_args(args, kwargs)}"
 
-    def cache_func(self, key: str, output: str):
-        timestamp = datetime.now(timezone.utc).timestamp()
+    def cache_func(self, key: str, timestamp: int, output: str):
         self._r.set(
-            key, _FuncCached(timestamp=timestamp, output=output).model_dump_json()
+            key, _FuncCacheDump(timestamp=timestamp, output=output).model_dump_json()
         )
 
-    def get_func(self, key: str) -> _FuncCached:
-        return _FuncCached.model_validate_json(self._r.get(key))
+    def get_func(self, key: str) -> _FuncCacheDump:
+        return _FuncCacheDump.model_validate_json(self._r.get(key))
 
     def erase_func(self, key):
         self._r.delete(key)
@@ -59,14 +58,21 @@ _r = redis.Redis(**get_redis_connection_params())
 
 _memcache = MemCache(_r)
 
+_TRIGGER_CALL_SECS = 2 * 3600  # two hours
+
 
 def cached(func):
     def wrapper(*args, **kwargs):
-        key = _memcache.key_func(args, kwargs)
-        if cached_output := _memcache.get_func(key):
-            return cached_output
-        output = func(*args, **kwargs)
-        _memcache.cache_func(key, output)
+        key = _memcache.key_func(func.__name__, args, kwargs)
+        if dump := _memcache.get_func(key):
+            call_dt = datetime.fromtimestamp(float(dump.timestamp), timezone.utc)
+            current_dt = datetime.now(timezone.utc)
+            delta = current_dt - call_dt
+            if delta.total_seconds() <= _TRIGGER_CALL_SECS:
+                return json.loads(dump.output)
+        output = json.dumps(func(*args, **kwargs))
+        timestamp = int(round(datetime.now(timezone.utc).timestamp()))
+        _memcache.cache_func(key, timestamp, output)
         return output
 
     return wrapper

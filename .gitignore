@@ -3,3 +3,6 @@
 .secrets
 .vscode
 *.log
+.redis
+*.py[cod]
+*lock*

@@ -21,8 +21,11 @@ class WSGIApplication(gunicorn.app.base.BaseApplication):
 
 
 if __name__ == "__main__":
+    import logging
     import forecasty
     import multiprocessing
+
+    logging.basicConfig(level=logging.INFO)
 
     SERVER_PORT = 5000
     WORKERS = (multiprocessing.cpu_count() * 2) + 1

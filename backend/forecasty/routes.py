@@ -5,8 +5,6 @@ from . import api
 
 forecast_bp = Blueprint("forecast_bp", __name__)
 
-coords = ("55.782547", "37.629834")
-
 
 def location_parse(string, provider) -> api.Geo | None:
     if len(string_coords := string.split(",")) == 2:

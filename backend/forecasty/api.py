@@ -19,20 +19,25 @@ class Geo(BaseModel):
 
 # Variable format: name_time_measure
 class WeatherConditions(BaseModel):
-    temperature_average_day_c: float
-    temperature_average_night_c: float
-    wind_speed_day_ms: float
-    wind_speed_night_ms: float
-    precipitation_probability_day_percent: float
-    precipitation_probability_night_percent: float
-    humidity_average_day_percent: float
-    humidity_average_night_percent: float
+    temperature_c: float
+    wind_speed_ms: float
+    humidity_percent: float
+    precipitation_probability_percent: float
+
+    def is_favorable(self) -> bool:
+        return (
+            (-15 <= self.temperature_c <= 30)
+            and (self.precipitation_probability_percent < 50)
+            and (self.wind_speed_ms < 19)
+        )
 
 
 class Weather(BaseModel):
     geo: Geo
     date: str  # string in iso format
     conditions: WeatherConditions
+    favorable: bool
+    description: str
 
 
 class ForecastDelta(str, Enum):
@@ -55,8 +60,8 @@ class Forecast(BaseModel):
         return len(self.units)
 
 
-def celsius_to_fahrenheit(celsius: float) -> float:
-    return (celsius - 32) * 5 / 9
+def fahrenheit_to_celsius(fahrenheit):
+    return (fahrenheit - 32) * 5 / 9
 
 
 def mih_to_ms(mih: float) -> float:
@@ -70,6 +75,8 @@ class Provider:
         longitude: float | None = None,
         latitude: float | None = None,
     ) -> Geo | None: ...
+
+    def get_conditions(self, geo: Geo) -> Weather: ...
 
     def get_forecast(
         self, geo: Geo, delta: ForecastDelta, longs: int
@@ -129,6 +136,36 @@ class AccuWeather(Provider):
             latitude=data["GeoPosition"]["Latitude"],
         )
 
+    def _get_conditions(self, geo: Geo):
+        baseurl = f"{self._domain}/currentconditions/v1/{geo.id}"
+        response = requests.get(
+            baseurl,
+            params={
+                "apikey": self._api_key,
+                "details": "true",
+                "language": self._locale,
+            },
+        )
+        return json.loads(response.text)
+
+    def get_conditions(self, geo: Geo) -> Weather:
+        data = self._get_conditions(geo)[0]
+        conds = WeatherConditions(
+            temperature_c=fahrenheit_to_celsius(
+                data["Temperature"]["Imperial"]["Value"]
+            ),
+            wind_speed_ms=mih_to_ms(data["Wind"]["Speed"]["Imperial"]["Value"]),
+            humidity_percent=data["RelativeHumidity"],
+            precipitation_probability_percent=int(data["HasPrecipitation"]) * 100,
+        )
+        return Weather(
+            geo=geo,
+            date=data["LocalObservationDateTime"],
+            conditions=conds,
+            favorable=conds.is_favorable(),
+            description=data["WeatherText"],
+        )
+
     @cached
     def _get_forecast(self, geo: Geo, delta: ForecastDelta, longs: int):
         raw_delta = {
@@ -139,39 +176,35 @@ class AccuWeather(Provider):
             f"{self._domain}/forecasts/v1/{raw_delta[0]}/{longs}{raw_delta[1]}/{geo.id}"
         )
         response = requests.get(
-            baseurl, params={"apikey": self._api_key, "details": "true"}
+            baseurl,
+            params={
+                "apikey": self._api_key,
+                "details": "true",
+                "language": self._locale,
+            },
         )
         return json.loads(response.text)
 
     def _parse_dayily_forecast(self, data: dict, geo: Geo) -> Forecast:
         units = []
         for forecast in data["DailyForecasts"]:
+            conds = WeatherConditions(
+                temperature_c=fahrenheit_to_celsius(
+                    forecast["Day"]["WetBulbTemperature"]["Average"]["Value"]
+                ),
+                wind_speed_ms=forecast["Day"]["Wind"]["Speed"]["Value"],
+                precipitation_probability_percent=forecast["Day"][
+                    "PrecipitationProbability"
+                ],
+                humidity_percent=forecast["Day"]["RelativeHumidity"]["Average"],
+            )
             units.append(
                 Weather(
                     geo=geo,
                     date=forecast["Date"],
-                    conditions=WeatherConditions(
-                        temperature_average_day_c=celsius_to_fahrenheit(
-                            forecast["Day"]["WetBulbTemperature"]["Average"]["Value"]
-                        ),
-                        temperature_average_night_c=celsius_to_fahrenheit(
-                            forecast["Night"]["WetBulbTemperature"]["Average"]["Value"]
-                        ),
-                        wind_speed_day_ms=forecast["Day"]["Wind"]["Speed"]["Value"],
-                        wind_speed_night_ms=forecast["Night"]["Wind"]["Speed"]["Value"],
-                        precipitation_probability_day_percent=forecast["Day"][
-                            "PrecipitationProbability"
-                        ],
-                        precipitation_probability_night_percent=forecast["Night"][
-                            "PrecipitationProbability"
-                        ],
-                        humidity_average_day_percent=forecast["Day"][
-                            "RelativeHumidity"
-                        ]["Average"],
-                        humidity_average_night_percent=forecast["Night"][
-                            "RelativeHumidity"
-                        ]["Average"],
-                    ),
+                    conditions=conds,
+                    favorable=conds.is_favorable(),
+                    description=forecast["Day"]["LongPhrase"],
                 )
             )
         return Forecast(units=units, delta=ForecastDelta.hour)
@@ -179,28 +212,21 @@ class AccuWeather(Provider):
     def _parse_hourly_forecast(self, data: dict, geo: Geo) -> Forecast:
         units = []
         for forecast in data:
+            conds = WeatherConditions(
+                temperature_c=fahrenheit_to_celsius(
+                    forecast["WetBulbTemperature"]["Value"]
+                ),
+                wind_speed_ms=forecast["Wind"]["Speed"]["Value"],
+                precipitation_probability_percent=forecast["PrecipitationProbability"],
+                humidity_percent=forecast["RelativeHumidity"],
+            )
             units.append(
                 Weather(
                     geo=geo,
                     date=forecast["DateTime"],
-                    conditions=WeatherConditions(
-                        temperature_average_day_c=celsius_to_fahrenheit(
-                            forecast["WetBulbTemperature"]["Value"]
-                        ),
-                        temperature_average_night_c=celsius_to_fahrenheit(
-                            forecast["WetBulbTemperature"]["Value"]
-                        ),
-                        wind_speed_day_ms=forecast["Wind"]["Speed"]["Value"],
-                        wind_speed_night_ms=forecast["Wind"]["Speed"]["Value"],
-                        precipitation_probability_day_percent=forecast[
-                            "PrecipitationProbability"
-                        ],
-                        precipitation_probability_night_percent=forecast[
-                            "PrecipitationProbability"
-                        ],
-                        humidity_average_day_percent=forecast["RelativeHumidity"],
-                        humidity_average_night_percent=forecast["RelativeHumidity"],
-                    ),
+                    conditions=conds,
+                    favorable=conds.is_favorable(),
+                    description=forecast["IconPhrase"],
                 )
             )
         return Forecast(units=units, delta=ForecastDelta.hour)

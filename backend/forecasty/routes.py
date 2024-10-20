@@ -47,3 +47,21 @@ def twelve_hours_forecast():
         return {"status": "error", "message": "could not get forecast"}
 
     return forecast.model_dump()
+
+
+@forecast_bp.route("/accu/currentconditions")
+def current_conditions():
+    if (location := request.args.get("location")) is None:
+        return {"status": "error", "message": "location query param must be provided"}
+
+    provider = api.AccuWeather()
+
+    if (geo := location_parse(location, provider)) is None:
+        return {"status": "error", "message": "could not parse location query param"}
+
+    conds = provider.get_conditions(geo=geo)
+
+    if conds is None:
+        return {"status": "error", "message": "could not get forecast"}
+
+    return conds.model_dump()

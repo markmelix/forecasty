@@ -1,10 +1,9 @@
-from enum import Enum
 import requests
 import json
 import os
 
 from .cache import cached
-from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel
 
 
@@ -217,31 +216,3 @@ class AccuWeather(Provider):
                 return self._parse_dayily_forecast(data, geo)
             case ForecastDelta.hour:
                 return self._parse_hourly_forecast(data, geo)
-
-
-@cached
-def get_location_key(longitude, latitude):
-    baseurl = (
-        "http://dataservice.accuweather.com/locations/v1/cities/geoposition/search"
-    )
-    response = requests.get(
-        baseurl,
-        params={
-            "apikey": API_KEY,
-            "q": f"{longitude},{latitude}",
-        },
-    )
-    return json.loads(response.content)["Key"]
-
-
-@cached
-def get_forecast(longitude, latitude):
-    location_key = get_location_key(longitude, latitude)
-    baseurl = (
-        f"http://dataservice.accuweather.com/forecasts/v1/daily/1day/{location_key}"
-    )
-    response = requests.get(
-        baseurl,
-        params={"apikey": API_KEY, "details": "true"},
-    )
-    return json.loads(response.text)

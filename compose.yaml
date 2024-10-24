@@ -30,7 +30,7 @@ services:
     build:
       context: ./frontend
     volumes:
-      - ./backend:/app
+      - ./frontend:/app
     ports:
       - 3000:3000
     networks:

@@ -13,6 +13,7 @@ gunicorn = "^23.0.0"
 requests = "^2.32.3"
 redis = {extras = ["hiredis"], version = "^5.1.1"}
 pydantic = "^2.9.2"
+flask-cors = "^5.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.6.1"]

@@ -17,6 +17,8 @@ docker compose up
 
 Затем перейдите на главную страницу web-приложения: http://localhost:3000/
 
+Ссылка на Telegram бота: https://t.me/forecasty_bot
+
 Автор: Меликсетян Марк.
 
 ## Ответы на вопросы по проекту

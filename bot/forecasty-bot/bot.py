@@ -37,6 +37,16 @@ async def cmd_start(message: types.Message):
     )
 
 
+@dp.message(Command("help"))
+async def cmd_help(message: types.Message):
+    await message.answer(
+        "Описание команд\n\n"
+        "/start - выводит приветственное сообщение\n"
+        "/help - выводит описание команд\n"
+        "/weather - получить прогноз погоды"
+    )
+
+
 def choose_forecast_keyboard():
     buttons = [
         [

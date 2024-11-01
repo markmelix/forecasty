@@ -6,4 +6,3 @@
 .redis
 *.py[cod]
 *lock*
-.env

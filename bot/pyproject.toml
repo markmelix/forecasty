@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "forecasty-bot"
+version = "0.1.0"
+description = ""
+authors = ["Mark Meliksetyan <markmelix@gmail.com>"]
+readme = "README.md"
+packages = [{include = "forecasty-bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.12.7"
+aiogram = "^3.13.1"
+
+[build-system]
+requires = ["poetry-core>=1.6.1"]
+build-backend = "poetry.core.masonry.api"

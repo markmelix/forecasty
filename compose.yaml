@@ -26,11 +26,11 @@ services:
     stop_grace_period: 1s
 
   frontend:
-    container_name: forecasty-frontend
+    container_name: forecasty-frontend-dash
     build:
-      context: ./frontend
+      context: ./frontend-dash
     volumes:
-      - ./frontend:/app
+      - ./frontend-dash:/app
     ports:
       - 3000:3000
     networks:

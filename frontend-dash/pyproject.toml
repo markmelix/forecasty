@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "forecasty-dash"
+version = "0.1.0"
+description = ""
+authors = ["Mark Meliksetyan <markmelix@gmail.com>"]
+readme = "README.md"
+packages = [{include = "forecasty"}]
+
+[tool.poetry.dependencies]
+python = "^3.12.7"
+plotly = "^5.24.1"
+dash = "^2.18.1"
+pandas = "^2.2.3"
+requests = "^2.32.3"
+
+[build-system]
+requires = ["poetry-core>=1.6.1"]
+build-backend = "poetry.core.masonry.api"

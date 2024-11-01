@@ -169,6 +169,75 @@ def update_route_list(data):
     ]
 
 
+def create_map_data(routes):
+    latitudes = []
+    longitudes = []
+    names = []
+    hover_texts = []
+
+    for route in routes:
+        weather = route["weather"]
+
+        name = weather["geo"]["name"]
+        conditions = weather["conditions"]
+        description = weather["description"]
+
+        latitudes.append(route["weather"]["geo"]["latitude"])
+        longitudes.append(route["weather"]["geo"]["longitude"])
+
+        names.append(name)
+
+        hover_texts.append(
+            f"{name}<br>"
+            f"<br>{description}<br><br>"
+            f"Температура: {conditions['temperature_c']:.2f} °C<br>"
+            f"Влажность: {conditions['humidity_percent']:.2f}%<br>"
+            f"Осадки: {conditions['precipitation_probability_percent']:.2f}%<br>"
+            f"Скорость ветра: {conditions['wind_speed_ms']:.2f} м/с<br>"
+        )
+
+    trace_points = go.Scattermapbox(
+        lat=latitudes,
+        lon=longitudes,
+        mode="markers+lines",
+        marker=dict(size=10, color="blue"),
+        text=hover_texts,
+        hoverinfo="text",
+        name="Города",
+    )
+
+    return [trace_points]
+
+
+@callback(
+    Output("map", "children"),
+    Input("route-store", "data"),
+)
+def render_map(raw_routes):
+    routes = [route for route in json.loads(raw_routes) if route["weather"]]
+
+    if not routes:
+        return []
+
+    first_geo = routes[0]["weather"]["geo"]
+
+    layout = go.Layout(
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(lat=first_geo["latitude"], lon=first_geo["longitude"]),
+            zoom=3,
+        ),
+        title="Города с текущей погодой",
+    )
+
+    return dcc.Graph(
+        id="map-graph",
+        figure=go.Figure(data=create_map_data(routes), layout=layout),
+        config={"displayModeBar": False},
+        style={"height": "75vh"},
+    )
+
+
 @callback(
     Output("forecast-store", "data"),
     Input("forecast-btn", "n_clicks"),
@@ -227,9 +296,8 @@ def render_graphs(raw_data):
 
     data = json.loads(raw_data)
 
-    # TODO: uncomment lines below
-    # if not data:
-    #     return []
+    if not data:
+        return []
 
     for i, (city, city_data) in enumerate(data.items()):
         df = pd.DataFrame(city_data)
@@ -264,7 +332,7 @@ def render_graphs(raw_data):
         graphs,
         2,
         group_style={
-            "width": "30vw",
+            "width": "40vw",
         },
     )
 

@@ -9,6 +9,7 @@ packages = [{include = "forecasty-bot"}]
 [tool.poetry.dependencies]
 python = "^3.12.7"
 aiogram = "^3.13.1"
+httpx = "^0.27.2"
 
 [build-system]
 requires = ["poetry-core>=1.6.1"]

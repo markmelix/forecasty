@@ -10,7 +10,17 @@ h1 {
 
 .content {
     display: flex;
+    align-items: center;
     flex-direction: column;
+}
+
+.row-content {
+    display: flex;
+    flex-direction: row;
+}
+
+.header {
+    display: flex;
     align-items: center;
 }
 

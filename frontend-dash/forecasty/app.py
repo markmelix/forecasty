@@ -25,39 +25,62 @@ GRAPH_PARAMS = OrderedDict(
 app = Dash(__name__)
 
 app.layout = [
-    html.Div([html.Div(html.H1("Forecasty"), className="header")], className="content"),
     html.Div(
         [
             html.Div(
                 [
-                    dcc.Input(
-                        id="enter-point",
-                        className="enter-point",
-                        name="enter-point",
-                        type="text",
-                        placeholder="Введите название города",
+                    html.Div(
+                        [
+                            html.Div(
+                                [html.Div(html.H1("Forecasty"), className="header")],
+                                className="content",
+                            ),
+                            html.Div(
+                                [
+                                    html.Div(
+                                        [
+                                            dcc.Input(
+                                                id="enter-point",
+                                                className="enter-point",
+                                                name="enter-point",
+                                                type="text",
+                                                placeholder="Введите название города",
+                                            ),
+                                            html.Button(
+                                                "+", id="add-btn", className="add-btn"
+                                            ),
+                                        ],
+                                        className="router-form",
+                                    ),
+                                    html.Div(
+                                        [], id="route-list", className="route-list"
+                                    ),
+                                    html.Div(
+                                        [
+                                            html.Button(
+                                                "Погода сейчас",
+                                                id="current-btn",
+                                                className="check-btn",
+                                            ),
+                                            html.Button(
+                                                "Прогноз на 5 дней",
+                                                id="forecast-btn",
+                                                className="check-btn",
+                                                style={"marginLeft": "5px"},
+                                            ),
+                                        ]
+                                    ),
+                                ],
+                                className="content",
+                            ),
+                        ],
+                        className="content",
                     ),
-                    html.Button("+", id="add-btn", className="add-btn"),
+                    html.Div(id="map", style={"display": "flex", "marginLeft": "40px"}),
                 ],
-                className="router-form",
+                className="row-content",
             ),
-            html.Div([], id="route-list", className="route-list"),
-            html.Div(
-                [
-                    html.Button(
-                        "Погода сейчас",
-                        id="current-btn",
-                        className="check-btn",
-                    ),
-                    html.Button(
-                        "Прогноз на 5 дней",
-                        id="forecast-btn",
-                        className="check-btn",
-                        style={"marginLeft": "5px"},
-                    ),
-                ]
-            ),
-            html.Div(id="graph-list", style={"display": "flex"}),
+            html.Div(id="graph-list", style={"display": "flex", "marginLeft": "40px"}),
         ],
         className="content",
     ),
@@ -241,7 +264,7 @@ def render_graphs(raw_data):
         graphs,
         2,
         group_style={
-            "width": "40vw",
+            "width": "30vw",
         },
     )
 

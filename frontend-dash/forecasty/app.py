@@ -5,6 +5,8 @@ import plotly.graph_objs as go
 
 from dash import Dash, State, html, ctx, dcc, callback, Output, Input
 
+API_URL = "http://forecasty-backend:5000"
+
 app = Dash(__name__)
 
 app.layout = [
@@ -91,19 +93,22 @@ def handle_routes(data, point_name, add_btn_clicks, current_btn_clicks):
             if current_btn_clicks == None:
                 return json.dumps([])
 
-            baseurl = "http://localhost:5000/accu/currentconditions"
+            baseurl = f"{API_URL}/accu/currentconditions"
 
             routes = json.loads(data)
 
             for route in routes:
                 try:
                     response = requests.get(baseurl, params={"location": route["name"]})
-                    if response.status_code == 200:
+                    if (
+                        response.status_code == 200
+                        and response.text.find("error") == -1
+                    ):
                         route["weather"] = json.loads(response.text)
                         route["found"] = True
                     else:
                         route["found"] = False
-                except requests.exceptions.RequestException:
+                except requests.exceptions.RequestException as e:
                     route["found"] = False
 
             return json.dumps(routes)
@@ -140,84 +145,72 @@ def update_route_list(data):
     ]
 
 
-# Данные по нескольким городам (примерная структура)
-# Предположим, что они были получены ранее от API и сохранены в переменной `all_city_data`
-all_city_data = {
-    "Москва": [
-        {
-            "date": "2024-11-01T07:00:00+03:00",
-            "temperature_c": 5.6,
-            "humidity_percent": 94,
-            "precipitation_probability_percent": 94,
-            "wind_speed_ms": 11.5,
-        },
-        {
-            "date": "2024-11-02T07:00:00+03:00",
-            "temperature_c": -1.1,
-            "humidity_percent": 84,
-            "precipitation_probability_percent": 1,
-            "wind_speed_ms": 17.3,
-        },
-        # добавьте другие дни
-    ],
-    "Санкт-Петербург": [
-        {
-            "date": "2024-11-01T07:00:00+03:00",
-            "temperature_c": 7.2,
-            "humidity_percent": 89,
-            "precipitation_probability_percent": 76,
-            "wind_speed_ms": 10.2,
-        },
-        {
-            "date": "2024-11-02T07:00:00+03:00",
-            "temperature_c": 0.3,
-            "humidity_percent": 82,
-            "precipitation_probability_percent": 20,
-            "wind_speed_ms": 15.0,
-        },
-        # добавьте другие дни
-    ],
-    # добавьте другие города
-}
-
-
-# Функция для обработки данных: конвертирует данные города в DataFrame
-def process_city_data(city_data):
-    return pd.DataFrame(city_data)
-
-
-# Коллбэк для обновления графиков
-@app.callback(
-    [
-        Output("temperature-graph", "figure"),
-        Output("humidity-graph", "figure"),
-        Output("precipitation-graph", "figure"),
-        Output("wind-speed-graph", "figure"),
-    ],
-    Input(
-        "temperature-graph", "id"
-    ),  # Искусственный Input для триггера обновления графиков при загрузке страницы
+@callback(
+    Output("forecast-store", "data"),
+    Input("forecast-btn", "n_clicks"),
+    Input("route-store", "data"),
 )
-def update_graphs(_):
+def fullfill_forecast(n_clicks, route_data):
+    if n_clicks == None:
+        return json.dumps({})
+
+    baseurl = f"{API_URL}/accu/forecast/5days"
+    routes = json.loads(route_data)
+
+    dump = {}
+
+    for route in routes:
+        try:
+            response = requests.get(baseurl, params={"location": route["name"]})
+            if response.status_code == 200 and response.text.find("error") == -1:
+                raw_data = json.loads(response.text)
+                dump[route["name"]] = []
+                for unit in raw_data["units"]:
+                    city = {"date": unit["date"]}
+                    for condition, value in unit["conditions"].items():
+                        city[condition] = value
+                    dump[route["name"]].append(city)
+        except requests.exceptions.RequestException:
+            pass
+
+    return json.dumps(dump)
+
+
+@app.callback(
+    Output("graph-list", "children"),
+    Input("forecast-store", "data"),
+)
+def render_graphs(raw_data):
     colors = [
         "#FF5733",
         "#33FF57",
         "#3357FF",
         "#FF33A8",
         "#A833FF",
-    ]  # Цвета для каждого города
+    ]
 
-    # Создаем графики для каждого параметра
+    params = [
+        ["temperature_c", "Температура по городам"],
+        ["humidity_percent", "Влажность по городам"],
+        ["precipitation_probability_percent", "Вероятность осадков по городам"],
+        ["wind_speed_ms", "Скорость ветра по городам"],
+    ]
+
+    traces = {}
+
+    for column, _ in params:
+        traces[column] = []
+
     temperature_traces = []
     humidity_traces = []
     precipitation_traces = []
     wind_speed_traces = []
 
-    # Обрабатываем данные по каждому городу
-    for i, (city, city_data) in enumerate(all_city_data.items()):
-        df = process_city_data(city_data)
+    data = json.loads(raw_data)
 
-        # Линии для каждого параметра (температура, влажность, осадки, ветер)
+    for i, (city, city_data) in enumerate(data.items()):
+        df = pd.DataFrame(city_data)
+
         temperature_traces.append(
             go.Scatter(
                 x=df["date"],
@@ -258,7 +251,6 @@ def update_graphs(_):
             )
         )
 
-    # Фигуры графиков
     temperature_fig = go.Figure(
         data=temperature_traces,
         layout=go.Layout(
@@ -295,7 +287,10 @@ def update_graphs(_):
         ),
     )
 
-    return temperature_fig, humidity_fig, precipitation_fig, wind_speed_fig
+    return [
+        dcc.Graph(figure=figure, config={"displayModeBar": False})
+        for figure in [temperature_fig, humidity_fig, precipitation_fig, wind_speed_fig]
+    ]
 
 
 if __name__ == "__main__":

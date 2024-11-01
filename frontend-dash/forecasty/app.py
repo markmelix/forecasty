@@ -57,21 +57,7 @@ app.layout = [
                     ),
                 ]
             ),
-            html.Div(
-                [
-                    # График температуры
-                    dcc.Graph(id="temperature-graph", config={"displayModeBar": False}),
-                    # График влажности
-                    dcc.Graph(id="humidity-graph", config={"displayModeBar": False}),
-                    # График вероятности осадков
-                    dcc.Graph(
-                        id="precipitation-graph", config={"displayModeBar": False}
-                    ),
-                    # График скорости ветра
-                    dcc.Graph(id="wind-speed-graph", config={"displayModeBar": False}),
-                ],
-                id="graph-list",
-            ),
+            html.Div(id="graph-list", style={"display": "flex"}),
         ],
         className="content",
     ),
@@ -191,6 +177,15 @@ def fullfill_forecast(n_clicks, route_data):
     return json.dumps(dump)
 
 
+def make_flex_row(elems, row_length, group_style={}):
+    return list(
+        map(
+            lambda group: html.Div(group, style=group_style),
+            zip(*[iter(elems)] * row_length, strict=True),
+        )
+    )
+
+
 @app.callback(
     Output("graph-list", "children"),
     Input("forecast-store", "data"),
@@ -208,6 +203,10 @@ def render_graphs(raw_data):
     graphs = []
 
     data = json.loads(raw_data)
+
+    # TODO: uncomment lines below
+    # if not data:
+    #     return []
 
     for i, (city, city_data) in enumerate(data.items()):
         df = pd.DataFrame(city_data)
@@ -238,7 +237,13 @@ def render_graphs(raw_data):
             )
         )
 
-    return graphs
+    return make_flex_row(
+        graphs,
+        2,
+        group_style={
+            "width": "40vw",
+        },
+    )
 
 
 if __name__ == "__main__":

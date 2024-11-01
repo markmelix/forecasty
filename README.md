@@ -2,7 +2,7 @@
 
 Веб-сервис для прогнозирования погоды для путешественников.
 
-Перед запуском установите соответствующие значения переменных REDIS_PASSWORD (пароль Redis), API_KEY (api-ключ AccuWeather) и BOT_TOKEN (токен от Telegram бота) в .env файле в корне проекта:
+Перед запуском установите соответствующие значения переменных `REDIS_PASSWORD` (пароль от Redis), `API_KEY` (api-ключ AccuWeather) и `BOT_TOKEN` (токен от Telegram бота) в `.env` файле в корне проекта:
 ```sh
 REDIS_PASSWORD="toor"
 API_KEY="..."

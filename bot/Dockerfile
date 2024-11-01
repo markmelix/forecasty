@@ -20,4 +20,4 @@ RUN poetry config --no-cache virtualenvs.create false && poetry install --no-cac
 COPY . .
 RUN poetry install --no-cache --no-dev --no-interaction --no-ansi
 
-CMD ["poetry", "run", "python", "forecasty/wsgi.py"]
+CMD ["poetry", "run", "python", "forecasty-bot/bot.py"]

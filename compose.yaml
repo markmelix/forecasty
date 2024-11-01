@@ -37,6 +37,18 @@ services:
       - default
     stop_grace_period: 1s
 
+  backend:
+    container_name: forecasty-bot
+    build:
+      context: ./bot
+    volumes:
+      - ./bot:/app
+    env_file:
+      - .env
+    networks:
+      - default
+    stop_grace_period: 1s
+
 networks:
   default:
     driver: bridge

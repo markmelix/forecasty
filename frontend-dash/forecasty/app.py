@@ -61,12 +61,22 @@ app.layout = [
                                                 "Погода сейчас",
                                                 id="current-btn",
                                                 className="check-btn",
+                                                style={"width": "100%"},
                                             ),
-                                            html.Button(
-                                                "Прогноз на 5 дней",
-                                                id="forecast-btn",
-                                                className="check-btn",
-                                                style={"marginLeft": "5px"},
+                                            html.Div(
+                                                [
+                                                    html.Button(
+                                                        "Прогноз на 12 часов",
+                                                        id="forecast-twelve-btn",
+                                                        className="check-btn",
+                                                    ),
+                                                    html.Button(
+                                                        "Прогноз на 5 дней",
+                                                        id="forecast-five-btn",
+                                                        className="check-btn",
+                                                        style={"marginLeft": "5px"},
+                                                    ),
+                                                ]
                                             ),
                                         ]
                                     ),
@@ -240,14 +250,22 @@ def render_map(raw_routes):
 
 @callback(
     Output("forecast-store", "data"),
-    Input("forecast-btn", "n_clicks"),
+    Input("forecast-five-btn", "n_clicks"),
+    Input("forecast-twelve-btn", "n_clicks"),
     Input("route-store", "data"),
 )
-def fullfill_forecast(n_clicks, route_data):
-    if n_clicks == None:
+def fullfill_forecast(forecast_five_clicks, forecast_twelve_clicks, route_data):
+    if (
+        forecast_five_clicks is None and forecast_twelve_clicks is None
+    ) or ctx.triggered_id == "route-store":
         return json.dumps({})
 
-    baseurl = f"{API_URL}/accu/forecast/5days"
+    baseurl = (
+        f"{API_URL}/accu/forecast/"
+        + {"forecast-five-btn": "5days", "forecast-twelve-btn": "12hours"}[
+            ctx.triggered_id
+        ]
+    )
     routes = json.loads(route_data)
 
     dump = {}

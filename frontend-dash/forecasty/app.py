@@ -3,9 +3,24 @@ import requests
 import pandas as pd
 import plotly.graph_objs as go
 
-from dash import Dash, State, html, ctx, dcc, callback, Output, Input
+from collections import OrderedDict
+from dash import Dash, State, Input, Output, html, ctx, dcc, callback
 
 API_URL = "http://forecasty-backend:5000"
+
+# Первый параметр: колонка, обозначающая погодное условие в api
+# Второй параметр: кортеж, обозначающий отображение погодного условия в графике
+GRAPH_PARAMS = OrderedDict(
+    [
+        ("temperature_c", ("Температура по городам", "Температура (°C)")),
+        ("humidity_percent", ("Влажность по городам", "Влажность (%)")),
+        (
+            "precipitation_probability_percent",
+            ("Вероятность осадков по городам", "Вероятность осадков (%)"),
+        ),
+        ("wind_speed_ms", ("Скорость ветра по городам", "Скорость ветра (м/с)")),
+    ]
+)
 
 app = Dash(__name__)
 
@@ -189,108 +204,41 @@ def render_graphs(raw_data):
         "#A833FF",
     ]
 
-    params = [
-        ["temperature_c", "Температура по городам"],
-        ["humidity_percent", "Влажность по городам"],
-        ["precipitation_probability_percent", "Вероятность осадков по городам"],
-        ["wind_speed_ms", "Скорость ветра по городам"],
-    ]
-
-    traces = {}
-
-    for column, _ in params:
-        traces[column] = []
-
-    temperature_traces = []
-    humidity_traces = []
-    precipitation_traces = []
-    wind_speed_traces = []
+    traces = {column: [] for column in GRAPH_PARAMS.keys()}
+    graphs = []
 
     data = json.loads(raw_data)
 
     for i, (city, city_data) in enumerate(data.items()):
         df = pd.DataFrame(city_data)
 
-        temperature_traces.append(
-            go.Scatter(
-                x=df["date"],
-                y=df["temperature_c"],
-                mode="lines+markers",
-                name=city,
-                line=dict(color=colors[i % len(colors)]),
+        for column in traces.keys():
+            traces[column].append(
+                go.Scatter(
+                    x=df["date"],
+                    y=df[column],
+                    mode="lines+markers",
+                    name=city,
+                    line=dict(color=colors[i % len(colors)]),
+                )
+            )
+
+    for column, trace_list in traces.items():
+        graphs.append(
+            dcc.Graph(
+                figure=go.Figure(
+                    data=trace_list,
+                    layout=go.Layout(
+                        title=GRAPH_PARAMS[column][0],
+                        xaxis={"title": "Дата"},
+                        yaxis={"title": GRAPH_PARAMS[column][1]},
+                    ),
+                ),
+                config={"displayModeBar": False},
             )
         )
 
-        humidity_traces.append(
-            go.Scatter(
-                x=df["date"],
-                y=df["humidity_percent"],
-                mode="lines+markers",
-                name=city,
-                line=dict(color=colors[i % len(colors)]),
-            )
-        )
-
-        precipitation_traces.append(
-            go.Scatter(
-                x=df["date"],
-                y=df["precipitation_probability_percent"],
-                mode="lines+markers",
-                name=city,
-                line=dict(color=colors[i % len(colors)]),
-            )
-        )
-
-        wind_speed_traces.append(
-            go.Scatter(
-                x=df["date"],
-                y=df["wind_speed_ms"],
-                mode="lines+markers",
-                name=city,
-                line=dict(color=colors[i % len(colors)]),
-            )
-        )
-
-    temperature_fig = go.Figure(
-        data=temperature_traces,
-        layout=go.Layout(
-            title="Температура по городам",
-            xaxis={"title": "Дата"},
-            yaxis={"title": "Температура (°C)"},
-        ),
-    )
-
-    humidity_fig = go.Figure(
-        data=humidity_traces,
-        layout=go.Layout(
-            title="Влажность по городам",
-            xaxis={"title": "Дата"},
-            yaxis={"title": "Влажность (%)"},
-        ),
-    )
-
-    precipitation_fig = go.Figure(
-        data=precipitation_traces,
-        layout=go.Layout(
-            title="Вероятность осадков по городам",
-            xaxis={"title": "Дата"},
-            yaxis={"title": "Вероятность осадков (%)"},
-        ),
-    )
-
-    wind_speed_fig = go.Figure(
-        data=wind_speed_traces,
-        layout=go.Layout(
-            title="Скорость ветра по городам",
-            xaxis={"title": "Дата"},
-            yaxis={"title": "Скорость ветра (м/с)"},
-        ),
-    )
-
-    return [
-        dcc.Graph(figure=figure, config={"displayModeBar": False})
-        for figure in [temperature_fig, humidity_fig, precipitation_fig, wind_speed_fig]
-    ]
+    return graphs
 
 
 if __name__ == "__main__":

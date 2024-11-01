@@ -86,11 +86,26 @@ class Provider:
         return hash(self.__class__.__name__)
 
 
+class ApiException(Exception):
+    pass
+
+
+class ApiKeyExpiredError(ApiException):
+    pass
+
+
 class AccuWeather(Provider):
     def __init__(self):
         self._locale = "ru-ru"
         self._api_key = os.getenv("API_KEY")
         self._domain = "http://dataservice.accuweather.com"
+
+    def _check_api_key_expiration(self, response):
+        if (
+            "The allowed number of requests has been exceeded".lower()
+            in response.text.lower()
+        ):
+            raise ApiKeyExpiredError("Обновите AccuWeather API ключ в .env файле")
 
     @cached
     def _get_geo(
@@ -117,6 +132,7 @@ class AccuWeather(Provider):
                 "language": self._locale,
             },
         )
+        self._check_api_key_expiration(response)
         return json.loads(response.text)
 
     def get_geo(
@@ -146,6 +162,7 @@ class AccuWeather(Provider):
                 "language": self._locale,
             },
         )
+        self._check_api_key_expiration(response)
         return json.loads(response.text)
 
     def get_conditions(self, geo: Geo) -> Weather:
@@ -183,6 +200,7 @@ class AccuWeather(Provider):
                 "language": self._locale,
             },
         )
+        self._check_api_key_expiration(response)
         return json.loads(response.text)
 
     def _parse_dayily_forecast(self, data: dict, geo: Geo) -> Forecast:
